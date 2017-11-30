@@ -27,88 +27,72 @@
 
 [//]: # "Image References"
 
-[confusion_matrix_1]: ./pictures/figure_1.png
+[confusion_matrix_1]: ./pictures/confusion_matrix_1.png
 
-[confusion_matrix_2]: ./pictures/figure_2.png
+[confusion_matrix_2]: ./pictures/confusion_matrix_2.png
 
-[pick_list_1]: ./pictures/pick_list_1.png
+[pick_list_1]: ./pictures/pick_list_1.jpg
 
-[pick_list_2]: ./pictures/pick_list_2.png
+[pick_list_1_result]: ./pictures/pick_list_1_result.jpg
 
-[pick_list_3]: ./pictures/pick_list_3.png
+[pick_list_2]: ./pictures/pick_list_2.jpg
+
+[pick_list_2_result]: ./pictures/pick_list_2_result.jpg
+
+[pick_list_3]: ./pictures/pick_list_3.jpg
+
+[pick_list_3_result]: ./pictures/pick_list_3_result.jpg
+
+[collision_map]: ./pictures/collision_map.png
 
 ### Exercise 1, 2 and 3 pipeline implemented
 #### 1. Complete Exercise 1 steps. Pipeline for filtering and RANSAC plane fitting implemented.
-- Statistical Outlier Filtering
-    Set the number of neighboring points 20 and threshold scale factor 0.3, any points with mean distance larger than (mean distance+x\*std_dev ) will be considered as outlier.
-```
-    fil = cloud.make_statistical_outlier_filter()
-    fil.set_mean_k(20)
-    fil.set_std_dev_mul_thresh(0.3)
-    filtered_cloud = fil.filter()
-```
 
 - Downsampling voxel grid
     `LEAF_SIZE` is set as 0.005
 ```
-    vox = filtered_cloud.make_voxel_grid_filter()
-
-    # Choose a voxel (also known as leaf) size
-    LEAF_SIZE = 0.005
-
-    # Set the voxel (or leaf) size  
+    vox = pcl_data.make_voxel_grid_filter()
+    LEAF_SIZE = 0.005  
     vox.set_leaf_size(LEAF_SIZE, LEAF_SIZE, LEAF_SIZE)
-
-    # Call the filter function to obtain the resultant downsampled point cloud
-    cloud_vox = vox.filter()
+    cloud_filtered = vox.filter()
 ```
 
 - PassThrough Filter
-    Create Passthrough filter in y and z axes
+    Create Passthrough filter in x and z axes
 ```
-    # Create a PassThrough filter object.
-    passthrough = cloud_vox.make_passthrough_filter()
-
-    # Assign axis and range to the passthrough filter object.
+    passthrough = cloud_filtered.make_passthrough_filter()
     filter_axis = 'z'
-    passthrough.set_filter_field_name(filter_axis)
-    axis_min = 0.6
-    axis_max = 1.3
-    passthrough.set_filter_limits(axis_min, axis_max)
+    passthrough.set_filter_field_name (filter_axis)
+    axis_min = 0.5
+    axis_max = 0.8
+    passthrough.set_filter_limits (axis_min, axis_max)
+    cloud_filtered = passthrough.filter()
 
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_passthrough = passthrough.filter()
+    passthrough = cloud_filtered.make_passthrough_filter()
+    filter_axis = 'x'
+    passthrough.set_filter_field_name (filter_axis)
+    axis_min = 0.4
+    axis_max = 0.8
+    passthrough.set_filter_limits (axis_min, axis_max)
+    cloud_filtered = passthrough.filter()
+```
 
-    # Create a PassThrough filter object.
-    passthrough = cloud_passthrough.make_passthrough_filter()
-
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough.set_filter_field_name(filter_axis)
-    axis_min = -0.5
-    axis_max = 0.5
-    passthrough.set_filter_limits(axis_min, axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_passthrough = passthrough.filter()
+- Statistical Outlier Filtering
+    Set the number of neighboring points 3 and threshold scale factor 0.1, any points with mean distance larger than (mean distance+x\*std_dev ) will be considered as outlier.
+```
+    cloud_filtered = cloud_filtered.make_statistical_outlier_filter()
+    cloud_filtered.set_mean_k(3)    
+    cloud_filtered.set_std_dev_mul_thresh(.1)
+    cloud_filtered = cloud_filtered.filter()
 ```
 
 - RANSAC Plane Segmentation
 ```
-    # Create the segmentation object
-    seg = cloud_passthrough.make_segmenter()
-
-    # Set the model you wish to fit
+    seg = cloud_filtered.make_segmenter()
     seg.set_model_type(pcl.SACMODEL_PLANE)
     seg.set_method_type(pcl.SAC_RANSAC)
-
-    # Max distance for a point to be considered fitting the model
-    # Experiment with different values for max_distance
-    # for segmenting the table
     max_distance = 0.01
     seg.set_distance_threshold(max_distance)
-
-    # Call the segment function to obtain set of inlier indices and model coefficients
     inliers, coefficients = seg.segment()
 ```
 
@@ -116,42 +100,31 @@
 
 #### 2. Complete Exercise 2 steps: Pipeline including clustering for segmentation implemented.
 ```
-    # Euclidean Clustering
-    white_cloud = XYZRGB_to_XYZ(cloud_objects)
+    white_cloud = XYZRGB_to_XYZ(cloud_objects)# Apply function to convert XYZRGB to XYZ
     tree = white_cloud.make_kdtree()
-
-    # Create a cluster extraction object
     ec = white_cloud.make_EuclideanClusterExtraction()
-    # Set tolerances for distance threshold
-    # as well as minimum and maximum cluster size (in points)
-    ec.set_ClusterTolerance(0.015)
-    ec.set_MinClusterSize(20)
+    ec.set_ClusterTolerance(0.007)
+    ec.set_MinClusterSize(30)
     ec.set_MaxClusterSize(3000)
-    # Search the k-d tree for clusters
     ec.set_SearchMethod(tree)
-    # Extract indices for each of the discovered clusters
     cluster_indices = ec.Extract()
 
     # Create Cluster-Mask Point Cloud to visualize each cluster separately
-    #Assign a color corresponding to each segmented object in scene
     cluster_color = get_color_list(len(cluster_indices))
-
     color_cluster_point_list = []
-
     for j, indices in enumerate(cluster_indices):
         for i, indice in enumerate(indices):
             color_cluster_point_list.append([white_cloud[indice][0],
-                                            white_cloud[indice][1],
-                                            white_cloud[indice][2],
-                                             rgb_to_float(cluster_color[j])])
+                                        white_cloud[indice][1],
+                                        white_cloud[indice][2],
+                                         rgb_to_float(cluster_color[j])])
 
-    #Create new cloud containing all clusters, each with unique color
     cluster_cloud = pcl.PointCloud_PointXYZRGB()
     cluster_cloud.from_list(color_cluster_point_list)
 
     # Convert PCL data to ROS messages
+    ros_cloud_table =  pcl_to_ros(cloud_table)
     ros_cloud_objects = pcl_to_ros(cloud_objects)
-    ros_cloud_table = pcl_to_ros(cloud_table)
     ros_cluster_cloud = pcl_to_ros(cluster_cloud)
 
     # Publish ROS messages
@@ -210,7 +183,7 @@
 
   - In 'capture_features.py' (sensor_stick/scripts):
 
-    50 features were captured for each object  to train SVM classifier.
+    100 features were captured for each object  to train SVM classifier.
 
   The confusion matrix without normalization is
 
@@ -267,10 +240,16 @@
             if dropbox_param[ii]['group'] == object_group:
                 arm_name.data = dropbox_param[ii]['name']
                 dropbox_position = dropbox_param[ii]['position']
-
-                place_pose.position.x = np.float(dropbox_position[0])
-                place_pose.position.y = np.float(dropbox_position[1])
-                place_pose.position.z = np.float(dropbox_position[2])
+                dropbox_x = -0.1  # dropbox_position[0]
+                # Add olace pose bias for each object
+                if arm_name.data == 'right':
+                    dropbox_y = dropbox_position[1] - 0.10 + target_count_right * 0.1
+                else:
+                    dropbox_y = dropbox_position[1] - 0.10 + target_count_left * 0.03
+                dropbox_z = dropbox_position[2] + 0.1
+                place_pose.position.x = np.float(dropbox_x)
+                place_pose.position.y = np.float(dropbox_y)
+                place_pose.position.z = np.float(dropbox_z)
 
         # Create a list of dictionaries (made with make_yaml_dict()) for later output to yaml format
         yaml_dict = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
@@ -282,8 +261,9 @@
 - Output request parameters into output yaml file
 ```
     yaml_filename = 'output_' + str(test_scene_num.data) + '.yaml'
-
-    send_to_yaml(yaml_filename, dict_list)
+    if not os.path.exists(yaml_filename):
+        send_to_yaml(yaml_filename, dict_list)
+        print(yaml_filename + "has been saved.")
 ```
 
 - Object recognition results

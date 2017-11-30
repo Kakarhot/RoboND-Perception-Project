@@ -204,7 +204,9 @@ def pr2_mover(object_list):
 
         object_name.data = str(target.label)
 
+		
         # Assign the arm and 'place_pose' to be used for pick_place
+        object_group = object_list_param[0]['group']
         for index in range(0, len(object_list_param)):
             if object_list_param[index]['name'] == target.label:
                 object_group = object_list_param[index]['group']
