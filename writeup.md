@@ -27,23 +27,16 @@
 
 [//]: # "Image References"
 
-[confusion_matrix_1]: ./pictures/confusion_matrix_1.png
+[confusion_matrix_1]: ./pictures/figure_1.png
 
-[confusion_matrix_2]: ./pictures/confusion_matrix_2.png
+[confusion_matrix_2]: ./pictures/figure_2.png
 
-[pick_list_1]: ./pictures/pick_list_1.jpg
+[pick_list_1]: ./pictures/pick_list_1.png
 
-[pick_list_1_result]: ./pictures/pick_list_1_result.jpg
+[pick_list_2]: ./pictures/pick_list_2.png
 
-[pick_list_2]: ./pictures/pick_list_2.jpg
+[pick_list_3]: ./pictures/pick_list_3.png
 
-[pick_list_2_result]: ./pictures/pick_list_2_result.jpg
-
-[pick_list_3]: ./pictures/pick_list_3.jpg
-
-[pick_list_3_result]: ./pictures/pick_list_3_result.jpg
-
-[collision_map]: ./pictures/collision_map.png
 
 ### Exercise 1, 2 and 3 pipeline implemented
 #### 1. Complete Exercise 1 steps. Pipeline for filtering and RANSAC plane fitting implemented.
@@ -81,7 +74,7 @@
     Set the number of neighboring points 3 and threshold scale factor 0.1, any points with mean distance larger than (mean distance+x\*std_dev ) will be considered as outlier.
 ```
     cloud_filtered = cloud_filtered.make_statistical_outlier_filter()
-    cloud_filtered.set_mean_k(3)    
+    cloud_filtered.set_mean_k(3)
     cloud_filtered.set_std_dev_mul_thresh(.1)
     cloud_filtered = cloud_filtered.filter()
 ```
@@ -232,7 +225,9 @@
 
         object_name.data = str(target.label)
 
+		
         # Assign the arm and 'place_pose' to be used for pick_place
+        object_group = object_list_param[0]['group']
         for index in range(0, len(object_list_param)):
             if object_list_param[index]['name'] == target.label:
                 object_group = object_list_param[index]['group']
@@ -240,16 +235,10 @@
             if dropbox_param[ii]['group'] == object_group:
                 arm_name.data = dropbox_param[ii]['name']
                 dropbox_position = dropbox_param[ii]['position']
-                dropbox_x = -0.1  # dropbox_position[0]
-                # Add olace pose bias for each object
-                if arm_name.data == 'right':
-                    dropbox_y = dropbox_position[1] - 0.10 + target_count_right * 0.1
-                else:
-                    dropbox_y = dropbox_position[1] - 0.10 + target_count_left * 0.03
-                dropbox_z = dropbox_position[2] + 0.1
-                place_pose.position.x = np.float(dropbox_x)
-                place_pose.position.y = np.float(dropbox_y)
-                place_pose.position.z = np.float(dropbox_z)
+
+                place_pose.position.x = np.float(dropbox_position[0])
+                place_pose.position.y = np.float(dropbox_position[1])
+                place_pose.position.z = np.float(dropbox_position[2])
 
         # Create a list of dictionaries (made with make_yaml_dict()) for later output to yaml format
         yaml_dict = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
@@ -260,10 +249,10 @@
 #### 1. For all three tabletop setups (`test*.world`), perform object recognition, then read in respective pick list (`pick_list_*.yaml`). Next construct the messages that would comprise a valid `PickPlace` request output them to `.yaml` format.
 - Output request parameters into output yaml file
 ```
+    # Output request parameters into output yaml file
     yaml_filename = 'output_' + str(test_scene_num.data) + '.yaml'
-    if not os.path.exists(yaml_filename):
-        send_to_yaml(yaml_filename, dict_list)
-        print(yaml_filename + "has been saved.")
+
+    send_to_yaml(yaml_filename, dict_list)
 ```
 
 - Object recognition results
